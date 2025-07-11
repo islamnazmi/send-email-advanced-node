@@ -1,0 +1,34 @@
+{
+  "name": "n8n-nodes-send-email-advanced",
+  "version": "0.1.9",
+  "description": "Send Email with Headers, Draft, and Reply capabilities for n8n",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc"
+  },
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "nodes": [
+      "dist/nodes/SendEmailAdvanced/SendEmailAdvanced.node.js"
+    ]
+  },
+  "keywords": [
+    "n8n",
+    "n8n-community-node",
+    "email",
+    "smtp",
+    "send",
+    "reply",
+    "draft"
+  ],
+  "author": "Islam Nazmy <nazmy@flowgene.site>",
+  "license": "MIT",
+  "dependencies": {
+    "nodemailer": "^6.9.13"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
+}
