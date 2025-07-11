@@ -1,34 +1,44 @@
 {
   "name": "n8n-nodes-send-email-advanced",
-  "version": "0.1.9",
-  "description": "Send Email with Headers, Draft, and Reply capabilities for n8n",
-  "files": [
-    "dist"
-  ],
+  "version": "1.0.0",
+  "description": "n8n community node for advanced email sending via SMTP",
+  "main": "dist/nodes/SendEmailAdvanced/SendEmailAdvanced.node.js",
+  "types": "dist/nodes/SendEmailAdvanced/SendEmailAdvanced.node.d.ts",
   "scripts": {
-    "build": "tsc"
-  },
-  "n8n": {
-    "n8nNodesApiVersion": 1,
-    "nodes": [
-      "dist/nodes/SendEmailAdvanced/SendEmailAdvanced.node.js"
-    ]
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "lint": "eslint .",
+    "lint:fix": "eslint --fix .",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
     "n8n",
-    "n8n-community-node",
+    "node",
     "email",
     "smtp",
-    "send",
-    "reply",
-    "draft"
+    "advanced"
   ],
-  "author": "Islam Nazmy <nazmy@flowgene.site>",
+  "author": "Your Name",
   "license": "MIT",
-  "dependencies": {
-    "nodemailer": "^6.9.13"
-  },
   "devDependencies": {
-    "typescript": "^5.4.5"
+    "@types/node": "^20.14.9",
+    "@types/nodemailer": "^6.4.15",
+    "@typescript-eslint/eslint-plugin": "^7.14.1",
+    "@typescript-eslint/parser": "^7.14.1",
+    "eslint": "^8.57.0",
+    "eslint-plugin-n8n-nodes-base": "^1.24.0",
+    "n8n-workflow": "^1.42.0",
+    "typescript": "^5.5.3"
+  },
+  "dependencies": {
+    "nodemailer": "^6.9.14"
+  },
+  "n8n": {
+    "nodes": [
+      "dist/nodes/SendEmailAdvanced/SendEmailAdvanced.node.js"
+    ],
+    "credentials": [
+      "dist/credentials/SendEmailAdvanced.credentials.js" // <-- MAKE SURE THIS IS ADDED
+    ]
   }
 }
