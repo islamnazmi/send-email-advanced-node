@@ -1,5 +1,6 @@
 import { INodeExecutionData, INodeType, INodeTypeDescription, IExecuteFunctions } from 'n8n-workflow';
 import nodemailer from 'nodemailer';
+import { SendMailOptions } from 'nodemailer/lib/mailer'; // Import SendMailOptions for better type safety
 
 export class SendEmailAdvanced implements INodeType {
 	description: INodeTypeDescription = {
@@ -13,6 +14,12 @@ export class SendEmailAdvanced implements INodeType {
 		},
 		inputs: ['main'],
 		outputs: ['main'],
+		credentials: [ // Use n8n's Credentials for sensitive info
+			{
+				name: 'smtpApi', // This name should match the credential type you define
+				required: true,
+			},
+		],
 		properties: [
 			{
 				displayName: 'Action',
@@ -25,6 +32,13 @@ export class SendEmailAdvanced implements INodeType {
 				],
 				default: 'send',
 				description: 'Choose the action type',
+			},
+			{
+				displayName: 'From Email', // Added new parameter for explicit 'From' address
+				name: 'fromEmail',
+				type: 'string',
+				default: '',
+				description: 'Sender email address (e.g., "Your Name <your@example.com>")',
 			},
 			{
 				displayName: 'To Email',
@@ -57,35 +71,6 @@ export class SendEmailAdvanced implements INodeType {
 				description: 'HTML content of the email',
 			},
 			{
-				displayName: 'SMTP Host',
-				name: 'smtpHost',
-				type: 'string',
-				default: '',
-				description: 'SMTP server host',
-			},
-			{
-				displayName: 'SMTP Port',
-				name: 'smtpPort',
-				type: 'number',
-				default: 587,
-				description: 'SMTP server port',
-			},
-			{
-				displayName: 'User',
-				name: 'user',
-				type: 'string',
-				default: '',
-				description: 'SMTP username',
-			},
-			{
-				displayName: 'Password',
-				name: 'password',
-				type: 'string',
-				typeOptions: { password: true },
-				default: '',
-				description: 'SMTP password',
-			},
-			{
 				displayName: 'Thread ID',
 				name: 'threadId',
 				type: 'string',
@@ -104,34 +89,42 @@ export class SendEmailAdvanced implements INodeType {
 		const items = this.getInputData();
 		const returnData: INodeExecutionData[] = [];
 
+		// Get SMTP credentials from n8n's credential store
+		const credentials = await this.getCredentials('smtpApi');
+		const smtpHost = credentials.host as string;
+		const smtpPort = credentials.port as number;
+		const user = credentials.user as string;
+		const password = credentials.password as string;
+
+		// Create transporter once outside the loop for efficiency
+		// Note: Nodemailer's createTransport might throw, but it's typically
+		// caught during workflow testing if credentials are bad from the start.
+		const transporter = nodemailer.createTransport({
+			host: smtpHost,
+			port: smtpPort,
+			secure: smtpPort === 465, // Use SSL if port is 465
+			auth: {
+				user,
+				pass: password,
+			},
+		});
+
 		for (let i = 0; i < items.length; i++) {
 			const action = this.getNodeParameter('action', i) as string;
+			const fromEmail = this.getNodeParameter('fromEmail', i) as string; // Get the new 'From' email
 			const toEmail = this.getNodeParameter('toEmail', i) as string;
 			const subject = this.getNodeParameter('subject', i) as string;
 			const emailText = this.getNodeParameter('emailText', i) as string;
 			const emailHtml = this.getNodeParameter('emailHtml', i) as string;
-			const smtpHost = this.getNodeParameter('smtpHost', i) as string;
-			const smtpPort = this.getNodeParameter('smtpPort', i) as number;
-			const user = this.getNodeParameter('user', i) as string;
-			const password = this.getNodeParameter('password', i) as string;
 			const threadId = this.getNodeParameter('threadId', i, '') as string;
 
-			const transporter = nodemailer.createTransport({
-				host: smtpHost,
-				port: smtpPort,
-				secure: smtpPort === 465,
-				auth: {
-					user,
-					pass: password,
-				},
-			});
-
-			const mailOptions: any = {
-				from: user,
+			// Define mail options with explicit type
+			const mailOptions: SendMailOptions = {
+				from: fromEmail, // Use the new 'fromEmail' parameter
 				to: toEmail,
 				subject: action === 'reply' ? `Re: ${subject}` : subject,
 				text: emailText,
-				html: emailHtml || undefined,
+				html: emailHtml || undefined, // Only include HTML if it has a value
 			};
 
 			if (action === 'reply' && threadId) {
@@ -141,17 +134,30 @@ export class SendEmailAdvanced implements INodeType {
 				};
 			}
 
-			if (action !== 'draft') {
-				await transporter.sendMail(mailOptions);
+			let success = false;
+			let errorMessage: string | undefined;
+
+			try {
+				if (action !== 'draft') {
+					await transporter.sendMail(mailOptions);
+					success = true;
+				} else {
+					success = true; // Drafting is considered a success without sending
+				}
+			} catch (error) {
+				success = false;
+				errorMessage = (error as Error).message; // Capture the error message
+				this.logger.error(`Error sending email: ${errorMessage}`); // Log the error
 			}
 
 			returnData.push({
 				json: {
-					success: true,
+					success,
 					action,
 					toEmail,
 					subject: mailOptions.subject,
-					sent: action !== 'draft',
+					sent: action !== 'draft' && success, // 'sent' is true only if action is not draft AND sending succeeded
+					error: errorMessage, // Include error message in output
 				},
 			});
 		}
@@ -159,3 +165,4 @@ export class SendEmailAdvanced implements INodeType {
 		return [returnData];
 	}
 }
+
